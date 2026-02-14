@@ -13,7 +13,7 @@
         android:elevation="0dp"
         android:gravity="center|start"
         android:paddingLeft="15dp"
-        android:paddingTop="13dp"
+        android:paddingTop="22dp"
         android:paddingRight="15dp"
         android:paddingBottom="5dp">
 
@@ -28,6 +28,7 @@
             android:textStyle="bold" />
 
         <androidx.constraintlayout.utils.widget.ImageFilterView
+            android:id="@+id/github_link"
             style="?android:attr/selectableItemBackgroundBorderless"
             android:layout_width="27dp"
             android:layout_height="27dp"

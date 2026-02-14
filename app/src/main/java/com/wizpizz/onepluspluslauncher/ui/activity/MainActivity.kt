@@ -34,6 +34,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         // Setup language selector
         setupLanguageSpinner()
 
+        // GitHub link
+        binding.githubLink.setOnClickListener {
+            val url = "https://github.com/zhangbaoshengrio/OnePlusPlusLauncher-OOS16"
+            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+        }
+
         // Setup feature toggles - all enabled by default
         setupFeatureToggle(binding.autoFocusSearchSwipeSwitch, PREF_AUTO_FOCUS_SEARCH_SWIPE)
         setupFeatureToggle(binding.autoFocusSearchRedirectSwitch, PREF_AUTO_FOCUS_SEARCH_REDIRECT)
