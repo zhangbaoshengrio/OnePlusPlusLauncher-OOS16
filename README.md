@@ -10,11 +10,11 @@ This fork was adapted for OOS16 by Zhangzong with assistance from OpenClaw.
 
 </div>
 
-![GitHub Release](https://img.shields.io/github/v/release/wizpizz/OnePlusPlusLauncher?style=for-the-badge)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/wizpizz/OnePlusPlusLauncher/debug_build.yml?style=for-the-badge&label=DEBUG%20BUILD)
-![GitHub License](https://img.shields.io/github/license/wizpizz/OnePlusPlusLauncher?style=for-the-badge)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/wizpizz/OnePlusPlusLauncher/total?style=for-the-badge)
-![GitHub Repo stars](https://img.shields.io/github/stars/wizpizz/OnePlusPlusLauncher?style=for-the-badge)
+![GitHub Release](https://img.shields.io/github/v/release/zhangbaoshengrio/OnePlusPlusLauncher-OOS16?style=for-the-badge)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/zhangbaoshengrio/OnePlusPlusLauncher-OOS16/debug_build.yml?style=for-the-badge&label=DEBUG%20BUILD)
+![GitHub License](https://img.shields.io/github/license/zhangbaoshengrio/OnePlusPlusLauncher-OOS16?style=for-the-badge)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/zhangbaoshengrio/OnePlusPlusLauncher-OOS16/total?style=for-the-badge)
+![GitHub Repo stars](https://img.shields.io/github/stars/zhangbaoshengrio/OnePlusPlusLauncher-OOS16?style=for-the-badge)
 
 
 **适配 OxygenOS 16 / System Launcher 16.4.15（build 160040015）**
@@ -39,7 +39,7 @@ OnePlusPlusLauncher is an Xposed/LSPosed module for the System Launcher on Oxyge
 **Before downloading, please check the release notes of the version you are downloading to see if it is compatible with your launcher version.**
 
 1. Make sure your device is rooted and you have LSPosed installed.
-2. Download the latest release APK (or any other older release) from the [releases page](https://github.com/wizpizz/OnePlusPlusLauncher/releases)
+2. Download the latest release APK (or any other older release) from the [releases page](https://github.com/zhangbaoshengrio/OnePlusPlusLauncher-OOS16/releases)
 3. Install the APK on your device.
 4. Enable the module in the LSPosed manager and make sure System Launcher is enabled in the scope settings.
 5. Restart System Launcher.
