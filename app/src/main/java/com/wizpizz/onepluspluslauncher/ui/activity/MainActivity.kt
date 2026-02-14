@@ -10,6 +10,9 @@ import com.wizpizz.onepluspluslauncher.R
 import com.wizpizz.onepluspluslauncher.databinding.ActivityMainBinding
 import com.wizpizz.onepluspluslauncher.ui.activity.base.BaseActivity
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_AUTO_FOCUS_SEARCH_SWIPE
+import com.wizpizz.onepluspluslauncher.utils.LocaleUtils
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_AUTO_FOCUS_SEARCH_REDIRECT
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_AUTO_FOCUS_SWIPE_DOWN_REDIRECT
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_ENTER_KEY_LAUNCH
@@ -28,6 +31,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         binding.mainTextVersion.text = getString(R.string.module_version, BuildConfig.VERSION_NAME)
         binding.mainTextVersion2.text = getString(R.string.supported_launcher_version, BuildConfig.SUPPORTED_LAUNCHER_VERSION)
         
+        // Setup language selector
+        setupLanguageSpinner()
+
         // Setup feature toggles - all enabled by default
         setupFeatureToggle(binding.autoFocusSearchSwipeSwitch, PREF_AUTO_FOCUS_SEARCH_SWIPE)
         setupFeatureToggle(binding.autoFocusSearchRedirectSwitch, PREF_AUTO_FOCUS_SEARCH_REDIRECT)
@@ -58,6 +64,31 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
     }
 
+    private fun setupLanguageSpinner() {
+        val entries = resources.getStringArray(R.array.language_entries)
+        val values = resources.getStringArray(R.array.language_values)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, entries)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.languageSpinner.adapter = adapter
+
+        val uiPrefs = getSharedPreferences(LocaleUtils.PREFS_NAME, MODE_PRIVATE)
+        val saved = uiPrefs.getString(LocaleUtils.PREF_UI_LANGUAGE, "") ?: ""
+        val initialIndex = values.indexOf(saved).takeIf { it >= 0 } ?: 0
+        binding.languageSpinner.setSelection(initialIndex, false)
+
+        binding.languageSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                val newLang = values.getOrNull(position) ?: return
+                val current = uiPrefs.getString(LocaleUtils.PREF_UI_LANGUAGE, "") ?: ""
+                if (newLang != current) {
+                    uiPrefs.edit().putString(LocaleUtils.PREF_UI_LANGUAGE, newLang).apply()
+                    recreate()
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
 
 
     /**

@@ -7,6 +7,7 @@
     <string name="module_is_activated">Activated</string>
 
     <string name="pref_fuzzy_search_title">Use Fuzzy Search Algorithm</string>
+    <string name="pref_language_title">Language</string>
     <string name="pref_auto_focus_search_swipe_title">Auto Focus on Swipe Up</string>
     <string name="pref_auto_focus_search_redirect_title">Auto Focus on Search Button Redirect</string>
     <string name="pref_auto_focus_swipe_down_redirect_title">Auto Focus on Swipe Down Redirect</string>

@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">OnePlusPlusLauncher</string>
+    <string name="xposed_desc">增强 OnePlus Launcher：自动聚焦搜索、回车启动应用、全局搜索重定向、模糊搜索等功能</string>
+    <string name="about_module">本模块由 YukiHookAPI 提供支持。\n了解更多：https://github.com/HighCapable/YuKiHookAPI</string>
+    <string name="module_version">模块版本：%s</string>
+    <string name="module_not_activated">未激活</string>
+    <string name="module_is_activated">已激活</string>
+
+    <string name="pref_fuzzy_search_title">启用模糊搜索算法</string>
+    <string name="pref_language_title">语言</string>
+    <string name="pref_auto_focus_search_swipe_title">上滑自动聚焦</string>
+    <string name="pref_auto_focus_search_redirect_title">搜索按钮重定向后自动聚焦</string>
+    <string name="pref_auto_focus_swipe_down_redirect_title">下滑重定向后自动聚焦</string>
+    <string name="pref_enter_key_launch_title">回车键启动应用</string>
+    <string name="pref_global_search_redirect_title">重定向全局搜索按钮</string>
+    <string name="pref_swipe_down_search_redirect_title">重定向下滑搜索</string>
+    <string name="pref_left_swipe_discover_redirect_title">重定向左滑（Google Discover）</string>
+    <string name="pref_auto_focus_left_swipe_redirect_title">左滑重定向后自动聚焦</string>
+    <string name="feature_settings">功能设置</string>
+    <string name="category_search_enhancement">搜索增强</string>
+    <string name="category_auto_focus">自动聚焦（显示键盘）</string>
+    <string name="category_search_redirect">搜索重定向（到应用抽屉）</string>
+    <string name="supported_launcher_version">支持的 Launcher 版本：%s</string>
+</resources>

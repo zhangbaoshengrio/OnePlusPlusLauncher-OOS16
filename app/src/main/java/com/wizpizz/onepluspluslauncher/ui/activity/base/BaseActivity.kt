@@ -16,6 +16,16 @@ import com.wizpizz.onepluspluslauncher.utils.factory.isNotSystemInDarkMode
 
 abstract class BaseActivity<VB : ViewBinding> : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val prefs = newBase.getSharedPreferences(
+            com.wizpizz.onepluspluslauncher.utils.LocaleUtils.PREFS_NAME,
+            android.content.Context.MODE_PRIVATE
+        )
+        val lang = prefs.getString(com.wizpizz.onepluspluslauncher.utils.LocaleUtils.PREF_UI_LANGUAGE, "")
+        val wrapped = com.wizpizz.onepluspluslauncher.utils.LocaleUtils.wrapContext(newBase, lang)
+        super.attachBaseContext(wrapped)
+    }
+
     /**
      * Get the binding layout object
      *
