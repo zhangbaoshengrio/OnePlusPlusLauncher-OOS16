@@ -2,6 +2,10 @@
 
 # OnePlusPlusLauncher
 
+**OxygenOS 16 / System Launcher 16.4.15 (build 160040015) adaptation.**  
+Original project: https://github.com/wizpizz/OnePlusPlusLauncher  
+This fork was adapted for OOS16 by Zhangzong with assistance from OpenClaw.
+
 ## LSPosed Module for OnePlus System Launcher
 
 </div>
