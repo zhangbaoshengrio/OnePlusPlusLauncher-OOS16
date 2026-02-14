@@ -146,7 +146,7 @@ object HookUtils {
             try {
                 if (searchUiManager is android.view.View) {
                     val view = searchUiManager
-                    val retryMs = listOf(200L, 500L, 900L)
+                    val retryMs = listOf(150L, 300L, 600L)
                     for (delay in retryMs) {
                         view.postDelayed({
                             try {
