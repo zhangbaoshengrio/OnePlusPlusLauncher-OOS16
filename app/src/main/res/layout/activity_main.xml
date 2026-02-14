@@ -13,7 +13,7 @@
         android:elevation="0dp"
         android:gravity="center|start"
         android:paddingLeft="15dp"
-        android:paddingTop="28dp"
+        android:paddingTop="38dp"
         android:paddingRight="15dp"
         android:paddingBottom="5dp">
 
