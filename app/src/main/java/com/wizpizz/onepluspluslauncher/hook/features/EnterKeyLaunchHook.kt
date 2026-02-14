@@ -15,7 +15,13 @@ import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.TAG
  * - System Launcher 15.6.13+: OnePlus Search Bar Controller hook
  */
 object EnterKeyLaunchHook {
-    
+
+    @Volatile
+    private var lastAutoLaunchQuery: String = ""
+
+    @Volatile
+    private var lastAutoLaunchTime: Long = 0L
+
     fun apply(packageParam: PackageParam) {
         packageParam.apply {
             // Check if enter key launch is enabled
@@ -24,15 +30,18 @@ object EnterKeyLaunchHook {
                 Log.d(TAG, "[EnterKeyLaunch] Feature disabled in preferences")
                 return@apply
             }
-            
+
             // Hook for System Launcher 15.4.13 (AndroidX SearchView)
             hookSearchView()
-            
+
             // Hook for System Launcher 15.6.13+ (OnePlus Controller)
             hookOnePlusController()
+
+            // Hook search result updates (OOS16+ fallback trigger)
+            hookAutoLaunchOnResults()
         }
     }
-    
+
     /**
      * Hook AndroidX SearchView for System Launcher 15.4.13
      */
@@ -40,12 +49,12 @@ object EnterKeyLaunchHook {
         ANDROID_X_SEARCH_VIEW_CLASS.toClassOrNull(appClassLoader)?.method {
             name = "onSubmitQuery"
             emptyParam()
-        }?.hook { 
+        }?.hook {
             before {
                 val searchViewInstance = instance as? android.view.View ?: return@before
-                
-                val searchAutoComplete = instance.current().method { 
-                    name = "getSearchAutoComplete" 
+
+                val searchAutoComplete = instance.current().method {
+                    name = "getSearchAutoComplete"
                 }.call()
                 val query = (searchAutoComplete as? android.widget.EditText)?.text?.toString() ?: ""
 
@@ -56,7 +65,7 @@ object EnterKeyLaunchHook {
                             it
                         )
                     }
-                    
+
                     if (launcherInstance != null) {
                         val success = appClassLoader?.let {
                             HookUtils.launchFirstSearchResult(
@@ -65,7 +74,7 @@ object EnterKeyLaunchHook {
                                 it
                             )
                         }
-                        
+
                         if (success == true) {
                             Log.d(TAG, "[SearchView] Successfully launched first result for: '$query'")
                             resultNull()
@@ -76,35 +85,35 @@ object EnterKeyLaunchHook {
             }
         } ?: Log.d(TAG, "[SearchView] AndroidX SearchView not found - likely System Launcher 15.6.13+")
     }
-    
+
     /**
      * Hook OnePlus Search Bar Controller for System Launcher 15.6.13+
      */
     private fun PackageParam.hookOnePlusController() {
         "com.android.launcher3.allapps.search.OplusAllAppsSearchBarController"
             .toClassOrNull(appClassLoader)?.method {
-            name = "initialize"
-            paramCount = 6
-        }?.hook {
-            after {
-                val controller = instance
-                val editTextParam = args[2] as? android.widget.EditText
-                
-                val searchEditText = editTextParam ?: findEditTextInController(controller)
-                
-                searchEditText?.setOnEditorActionListener { textView, actionId, _ ->
-                    handleEditorAction(textView, actionId, controller)
+                name = "initialize"
+                paramCount = 6
+            }?.hook {
+                after {
+                    val controller = instance
+                    val editTextParam = args[2] as? android.widget.EditText
+
+                    val searchEditText = editTextParam ?: findEditTextInController(controller)
+
+                    searchEditText?.setOnEditorActionListener { textView, actionId, _ ->
+                        handleEditorAction(textView, actionId, controller)
+                    }
                 }
-            }
-        } ?: Log.d(TAG, "[OnePlusController] OplusAllAppsSearchBarController not found - likely System Launcher 15.4.13")
+            } ?: Log.d(TAG, "[OnePlusController] OplusAllAppsSearchBarController not found - likely System Launcher 15.4.13")
     }
-    
+
     /**
      * Find EditText field in OnePlus controller
      */
     private fun findEditTextInController(controller: Any): android.widget.EditText? {
         val fieldNames = listOf("mEditText", "mSearchInput", "mInput", "mSearchField", "editText")
-        
+
         for (fieldName in fieldNames) {
             try {
                 val field = controller.javaClass.field { name = fieldName; superClass(true) }
@@ -118,7 +127,7 @@ object EnterKeyLaunchHook {
         }
         return null
     }
-    
+
     /**
      * Handle Enter key press in OnePlus controller
      */
@@ -131,7 +140,7 @@ object EnterKeyLaunchHook {
             val query = textView.text.toString().trim()
             if (query.isNotEmpty()) {
                 val launcherInstance = getLauncherInstance(textView, controller)
-                
+
                 if (launcherInstance != null) {
                     val success = appClassLoader?.let {
                         HookUtils.launchFirstSearchResult(
@@ -140,7 +149,7 @@ object EnterKeyLaunchHook {
                             it
                         )
                     }
-                    
+
                     if (success == true) {
                         Log.d(TAG, "[OnePlusController] Successfully launched first result for: '$query'")
                         return true
@@ -150,7 +159,7 @@ object EnterKeyLaunchHook {
         }
         return false
     }
-    
+
     /**
      * Get launcher instance from OnePlus controller
      */
@@ -177,6 +186,47 @@ object EnterKeyLaunchHook {
             }
         }
     }
-    
 
-} 
+    /**
+     * Fallback: auto-launch first result after search results update
+     * (OOS16+ where EditorAction may not fire)
+     */
+    private fun PackageParam.hookAutoLaunchOnResults() {
+        "com.android.launcher3.allapps.search.LauncherTaskbarAppsSearchContainerLayout"
+            .toClassOrNull(appClassLoader)?.method {
+                name = "onSearchResult"
+                param(String::class.java.name, "java.util.ArrayList")
+            }?.hook {
+                after {
+                    val query = args[0] as? String ?: return@after
+                    val results = args[1] as? java.util.ArrayList<*> ?: return@after
+                    if (query.isBlank() || results.isEmpty()) return@after
+
+                    val now = System.currentTimeMillis()
+                    if (query == lastAutoLaunchQuery && (now - lastAutoLaunchTime) < 1200L) return@after
+
+                    val view = instance as? android.view.View ?: return@after
+                    val launcherInstance = appClassLoader?.let {
+                        HookUtils.getLauncherFromContext(view.context, it)
+                    } ?: return@after
+
+                    lastAutoLaunchQuery = query
+                    lastAutoLaunchTime = now
+
+                    view.post {
+                        try {
+                            val success = appClassLoader?.let {
+                                HookUtils.launchFirstSearchResult(launcherInstance, view, it)
+                            } == true
+                            if (success) {
+                                Log.d(TAG, "[AutoLaunchOnResults] Launched first result for: '$query'")
+                            }
+                        } catch (t: Throwable) {
+                            Log.d(TAG, "[AutoLaunchOnResults] Launch failed: ${t.message}")
+                        }
+                    }
+                }
+            } ?: Log.d(TAG, "[AutoLaunchOnResults] Search container not found")
+    }
+
+}
