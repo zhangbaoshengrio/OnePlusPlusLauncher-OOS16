@@ -170,6 +170,11 @@ object HookUtils {
                                 val imm = targetView.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
                                 imm?.showSoftInput(targetView, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
 
+                                // On last retry, try a stronger toggle
+                                if (delay >= 900L) {
+                                    imm?.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0)
+                                }
+
                                 Log.d(TAG, "[AutoFocus] Retried showKeyboard (delay=${delay}ms)")
                             } catch (e: Throwable) {
                                 Log.d(TAG, "[AutoFocus] Retry showKeyboard failed: ${e.message}")

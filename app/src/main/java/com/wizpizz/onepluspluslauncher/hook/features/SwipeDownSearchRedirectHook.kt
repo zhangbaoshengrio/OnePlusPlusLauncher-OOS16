@@ -137,10 +137,6 @@ object SwipeDownSearchRedirectHook {
                 Log.w(TAG, "[SwipeDownSearch] Could not clean up BlurScrimWindowController: ${e.message}")
             }
 
-            // Try to reset controller state (newer versions may keep overlay state)
-            try { controllerInstance.current().method { name = "resetPullDownState"; superClass() }.call() } catch (_: Throwable) {}
-            try { controllerInstance.current().method { name = "resetState"; superClass() }.call() } catch (_: Throwable) {}
-            try { controllerInstance.current().method { name = "reset"; superClass() }.call() } catch (_: Throwable) {}
             
         } catch (e: Throwable) {
             Log.e(TAG, "[SwipeDownSearch] Error during animation cleanup: ${e.message}")
