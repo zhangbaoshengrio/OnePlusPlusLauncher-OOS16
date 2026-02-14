@@ -145,26 +145,37 @@ object HookUtils {
             // Retry keyboard show after a short delay (some builds need a second tick)
             try {
                 if (searchUiManager is android.view.View) {
-                    searchUiManager.postDelayed({
-                        try {
-                            // Re-focus if possible
-                            val editText = try {
-                                searchUiManager.current().method {
-                                    name = "getEditText"
-                                    superClass()
-                                }.call() as? android.widget.EditText
-                            } catch (_: Throwable) { null }
-                            editText?.requestFocus()
+                    val view = searchUiManager
+                    val retryMs = listOf(200L, 500L, 900L)
+                    for (delay in retryMs) {
+                        view.postDelayed({
+                            try {
+                                // Re-focus if possible
+                                val editText = try {
+                                    searchUiManager.current().method {
+                                        name = "getEditText"
+                                        superClass()
+                                    }.call() as? android.widget.EditText
+                                } catch (_: Throwable) { null }
+                                editText?.requestFocus()
 
-                            searchUiManager.current().method {
-                                name = "showKeyboard"
-                                superClass()
-                            }.call()
-                            Log.d(TAG, "[AutoFocus] Retried showKeyboard")
-                        } catch (e: Throwable) {
-                            Log.d(TAG, "[AutoFocus] Retry showKeyboard failed: ${e.message}")
-                        }
-                    }, 200)
+                                // Try framework showKeyboard again
+                                searchUiManager.current().method {
+                                    name = "showKeyboard"
+                                    superClass()
+                                }.call()
+
+                                // Force InputMethodManager
+                                val targetView = (editText ?: view) as android.view.View
+                                val imm = targetView.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                                imm?.showSoftInput(targetView, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+
+                                Log.d(TAG, "[AutoFocus] Retried showKeyboard (delay=${delay}ms)")
+                            } catch (e: Throwable) {
+                                Log.d(TAG, "[AutoFocus] Retry showKeyboard failed: ${e.message}")
+                            }
+                        }, delay)
+                    }
                 }
             } catch (_: Throwable) {}
             
