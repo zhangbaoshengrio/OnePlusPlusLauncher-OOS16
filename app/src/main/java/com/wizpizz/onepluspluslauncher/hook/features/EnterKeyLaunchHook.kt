@@ -1,6 +1,7 @@
 package com.wizpizz.onepluspluslauncher.hook.features
 
 import android.util.Log
+import android.view.KeyEvent
 import com.highcapable.yukihookapi.hook.param.PackageParam
 import com.highcapable.yukihookapi.hook.factory.current
 import com.highcapable.yukihookapi.hook.factory.field
@@ -37,8 +38,9 @@ object EnterKeyLaunchHook {
             // Hook for System Launcher 15.6.13+ (OnePlus Controller)
             hookOnePlusController()
 
-            // Hook search result updates (OOS16+ fallback trigger)
-            hookAutoLaunchOnResults()
+            // hookAutoLaunchOnResults disabled: Enter key hook now works on OOS16,
+            // auto-launch on every search update is no longer needed
+            // hookAutoLaunchOnResults()
         }
     }
 
@@ -101,8 +103,13 @@ object EnterKeyLaunchHook {
 
                     val searchEditText = editTextParam ?: findEditTextInController(controller)
 
-                    searchEditText?.setOnEditorActionListener { textView, actionId, _ ->
-                        handleEditorAction(textView, actionId, controller)
+                    if (searchEditText != null) {
+                        // Use postDelayed to ensure our listener is set after the system's
+                        searchEditText.postDelayed({
+                            searchEditText.setOnEditorActionListener { textView, actionId, keyEvent ->
+                                handleEditorAction(textView, actionId, keyEvent, controller)
+                            }
+                        }, 200L)
                     }
                 }
             } ?: Log.d(TAG, "[OnePlusController] OplusAllAppsSearchBarController not found - likely System Launcher 15.4.13")
@@ -129,17 +136,33 @@ object EnterKeyLaunchHook {
     }
 
     /**
-     * Handle Enter key press in OnePlus controller
+     * Handle Enter key press in OnePlus controller.
+     * Accepts common IME actions and KeyEvent-based Enter presses
+     * to ensure compatibility with various IMEs (e.g. WeChat Input).
      */
     private fun PackageParam.handleEditorAction(
         textView: android.widget.TextView,
         actionId: Int,
+        keyEvent: KeyEvent?,
         controller: Any
     ): Boolean {
-        if ((actionId == 2 || actionId == 3) && !android.text.TextUtils.isEmpty(textView.text)) {
+        Log.d(TAG, "[OnePlusController] handleEditorAction: actionId=$actionId, keyEvent=$keyEvent")
+
+        // Check if this is an Enter action:
+        // - actionId 0 (IME_ACTION_UNSPECIFIED), 2 (IME_ACTION_GO), 3 (IME_ACTION_SEARCH),
+        //   5 (IME_ACTION_NEXT), 6 (IME_ACTION_DONE) are common IME actions for Enter
+        // - Also handle KeyEvent with KEYCODE_ENTER (some IMEs send Enter as a KeyEvent)
+        val isEnterAction = actionId in intArrayOf(0, 2, 3, 5, 6)
+        val isEnterKey = keyEvent != null &&
+                keyEvent.keyCode == KeyEvent.KEYCODE_ENTER &&
+                keyEvent.action == KeyEvent.ACTION_DOWN
+
+        if ((isEnterAction || isEnterKey) && !android.text.TextUtils.isEmpty(textView.text)) {
             val query = textView.text.toString().trim()
+            Log.d(TAG, "[OnePlusController] query='$query'")
             if (query.isNotEmpty()) {
                 val launcherInstance = getLauncherInstance(textView, controller)
+                Log.d(TAG, "[OnePlusController] launcherInstance=$launcherInstance")
 
                 if (launcherInstance != null) {
                     val success = appClassLoader?.let {
@@ -149,13 +172,18 @@ object EnterKeyLaunchHook {
                             it
                         )
                     }
+                    Log.d(TAG, "[OnePlusController] launchFirstSearchResult success=$success")
 
                     if (success == true) {
                         Log.d(TAG, "[OnePlusController] Successfully launched first result for: '$query'")
                         return true
                     }
+                } else {
+                    Log.d(TAG, "[OnePlusController] launcherInstance is NULL")
                 }
             }
+        } else {
+            Log.d(TAG, "[OnePlusController] Skipped: isEnterAction=$isEnterAction, isEnterKey=$isEnterKey, text='${textView.text}'")
         }
         return false
     }

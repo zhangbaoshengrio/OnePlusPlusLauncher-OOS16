@@ -281,36 +281,108 @@ object HookUtils {
         appClassLoader: ClassLoader
     ): Boolean {
         return try {
-            val appsView = launcherInstance.current().method { 
-                name = "getAppsView"; superClass() 
+            val appsView = launcherInstance.current().method {
+                name = "getAppsView"; superClass()
             }.call()
-            
-            val appsList = appsView?.current()?.method { 
-                name = "getAlphabeticalAppsList"; superClass() 
-            }?.call() ?: appsView?.current()?.method { 
-                name = "getAppsList"; superClass() 
+
+            // OOS16: Click the first visible app item in the search RecyclerView
+            // This ensures we launch exactly what the user sees as the first result
+            try {
+                val searchRv = appsView?.current()?.method { name = "getActiveSearchRecyclerView"; superClass() }?.call()
+
+                if (searchRv != null && searchRv is android.view.ViewGroup) {
+                    val childCount = searchRv.childCount
+                    Log.d(TAG, "[LaunchFirst] searchRv childCount=$childCount")
+
+                    if (childCount > 0) {
+                        // Find the first child that looks like an app icon (BubbleTextView or clickable view)
+                        for (i in 0 until minOf(childCount, 15)) {
+                            val child = searchRv.getChildAt(i)
+                            if (child == null) continue
+
+                            // If child is a clickable view with a tag (app item), click it
+                            if (child.isClickable && child.tag != null) {
+                                val tag = child.tag
+                                val tagClass = tag.javaClass.name
+                                Log.d(TAG, "[LaunchFirst] child[$i] tag class=$tagClass")
+
+                                // Check if tag is an ItemInfo (app info)
+                                val itemInfoClass = ITEM_INFO_CLASS.toClass(appClassLoader)
+                                if (itemInfoClass.isInstance(tag)) {
+                                    val intent = tag.current().method { name = "getIntent"; superClass() }.call() as? android.content.Intent
+                                    if (intent != null) {
+                                        Log.d(TAG, "[LaunchFirst] Launching via tag intent=$intent")
+                                        launcherInstance.current().method {
+                                            name = "startActivitySafely"
+                                            param(VIEW_CLASS.toClass(appClassLoader),
+                                                    INTENT_CLASS.toClass(appClassLoader),
+                                                    ITEM_INFO_CLASS.toClass(appClassLoader))
+                                            superClass()
+                                        }.call(child, intent, tag)
+                                        return true
+                                    }
+                                }
+                            }
+
+                            // If child is a ViewGroup (e.g. a row of icons), search inside it
+                            if (child is android.view.ViewGroup) {
+                                for (j in 0 until child.childCount) {
+                                    val subChild = child.getChildAt(j)
+                                    if (subChild != null && subChild.isClickable && subChild.tag != null) {
+                                        val tag = subChild.tag
+                                        val itemInfoClass = ITEM_INFO_CLASS.toClass(appClassLoader)
+                                        if (itemInfoClass.isInstance(tag)) {
+                                            val intent = tag.current().method { name = "getIntent"; superClass() }.call() as? android.content.Intent
+                                            if (intent != null) {
+                                                Log.d(TAG, "[LaunchFirst] Launching via subChild tag intent=$intent")
+                                                launcherInstance.current().method {
+                                                    name = "startActivitySafely"
+                                                    param(VIEW_CLASS.toClass(appClassLoader),
+                                                            INTENT_CLASS.toClass(appClassLoader),
+                                                            ITEM_INFO_CLASS.toClass(appClassLoader))
+                                                    superClass()
+                                                }.call(subChild, intent, tag)
+                                                return true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                Log.d(TAG, "[LaunchFirst] searchRv approach failed: ${e.message}")
+            }
+
+            // Fallback: Try main AlphabeticalAppsList (older launcher versions)
+            val appsList = appsView?.current()?.method {
+                name = "getAlphabeticalAppsList"; superClass()
+            }?.call() ?: appsView?.current()?.method {
+                name = "getAppsList"; superClass()
             }?.call()
 
             if (appsList != null) {
-                val searchResults = appsList.current().method { 
-                    name = "getSearchResults"; superClass() 
-                }.call() as? ArrayList<*>
-                
-                if (searchResults != null && searchResults.isNotEmpty()) {
-                    val firstAdapterItem = searchResults[0]
+                var resultItems: List<*>? = null
+                try {
+                    resultItems = appsList.current().method { name = "getSearchResults"; superClass() }.call() as? List<*>
+                } catch (_: Throwable) {}
+
+                if (resultItems != null && resultItems.isNotEmpty()) {
+                    val firstAdapterItem = resultItems[0]
                     if (firstAdapterItem != null) {
-                        val itemInfoField = firstAdapterItem.javaClass.field { 
-                            name = "itemInfo"; superClass(true) 
+                        val itemInfoField = firstAdapterItem.javaClass.field {
+                            name = "itemInfo"; superClass(true)
                         }
                         val itemInfoObject = itemInfoField.get(firstAdapterItem).any()
                         val itemInfoClass = ITEM_INFO_CLASS.toClass(appClassLoader)
                         val itemInfo = if (itemInfoClass.isInstance(itemInfoObject)) itemInfoObject else null
-                        
+
                         if (itemInfo != null) {
-                            val foundIntent = itemInfo.current().method { 
+                            val foundIntent = itemInfo.current().method {
                                 name = "getIntent"; superClass()
                             }.call() as? android.content.Intent
-                            
+
                             if (foundIntent != null) {
                                 launcherInstance.current().method {
                                     name = "startActivitySafely"
@@ -319,16 +391,17 @@ object HookUtils {
                                             ITEM_INFO_CLASS.toClass(appClassLoader))
                                     superClass()
                                 }.call(searchView, foundIntent, itemInfo)
-                                
                                 return true
                             }
                         }
                     }
                 }
             }
+
+            Log.d(TAG, "[LaunchFirst] No launchable item found")
             false
         } catch (e: Throwable) {
-            Log.e(TAG, "Error launching first search result: ${e.message}")
+            Log.e(TAG, "Error launching first search result: ${e.message}", e)
             false
         }
     }
