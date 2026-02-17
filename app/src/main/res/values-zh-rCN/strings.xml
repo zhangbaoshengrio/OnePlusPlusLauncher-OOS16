@@ -16,6 +16,7 @@
     <string name="pref_swipe_down_search_redirect_title">重定向下滑搜索</string>
     <string name="pref_left_swipe_discover_redirect_title">重定向左滑（Google Discover）</string>
     <string name="pref_auto_focus_left_swipe_redirect_title">左滑重定向后自动聚焦</string>
+    <string name="pref_limit_two_rows_search_title">显示2行结果</string>
     <string name="feature_settings">功能设置</string>
     <string name="category_search_enhancement">搜索增强</string>
     <string name="category_auto_focus">自动聚焦（显示键盘）</string>

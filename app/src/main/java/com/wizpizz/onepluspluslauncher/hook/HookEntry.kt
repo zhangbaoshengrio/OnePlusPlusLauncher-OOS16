@@ -24,6 +24,7 @@ object HookEntry : IYukiHookXposedInit {
             GlobalSearchRedirectHook.apply(this)
             SwipeDownSearchRedirectHook.apply(this)
             LeftSwipeDiscoverRedirectHook.apply(this)
+            SearchResultsAboveBarHook.apply(this)
         }
     }
 }

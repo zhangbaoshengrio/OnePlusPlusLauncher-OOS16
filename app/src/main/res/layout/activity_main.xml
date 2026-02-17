@@ -197,6 +197,18 @@
                     android:lineSpacingExtra="2dp" />
 
                 <com.wizpizz.onepluspluslauncher.ui.view.MaterialSwitch
+                    android:id="@+id/limit_two_rows_search_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/pref_limit_two_rows_search_title"
+                    android:textAllCaps="false"
+                    android:textColor="@color/colorTextGray"
+                    android:textSize="15sp"
+                    android:maxLines="3"
+                    android:lineSpacingExtra="2dp" />
+
+                <com.wizpizz.onepluspluslauncher.ui.view.MaterialSwitch
                     android:id="@+id/enter_key_launch_switch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

@@ -5,6 +5,7 @@ import com.highcapable.yukihookapi.hook.factory.current
 import com.highcapable.yukihookapi.hook.factory.field
 import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.param.PackageParam
+import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_LIMIT_TWO_ROWS_SEARCH
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_USE_FUZZY_SEARCH
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.TAG
 import me.xdrop.fuzzywuzzy.FuzzySearch
@@ -200,7 +201,15 @@ object FuzzySearchHook {
         val adapterItemClass = BASE_ADAPTER_ITEM_CLASS.toClass(appClassLoader)
         val appInfoClass = APP_INFO_CLASS.toClass(appClassLoader)
 
-        sortedResults.forEach { result ->
+        // Limit to 2 rows (8 apps) if enabled
+        val limitTwoRows = prefs.getBoolean(PREF_LIMIT_TWO_ROWS_SEARCH, false)
+        val resultsToShow = if (limitTwoRows) {
+            sortedResults.take(8) // 2 rows × 4 columns = 8 apps
+        } else {
+            sortedResults
+        }
+
+        resultsToShow.forEach { result ->
             try {
                 val adapterItem = adapterItemClass.method {
                     name = "asApp"

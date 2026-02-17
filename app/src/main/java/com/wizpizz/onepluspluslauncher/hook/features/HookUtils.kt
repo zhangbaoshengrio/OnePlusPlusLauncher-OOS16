@@ -25,6 +25,7 @@ object HookUtils {
     const val PREF_SWIPE_DOWN_SEARCH_REDIRECT = "swipe_down_search_redirect"
     const val PREF_LEFT_SWIPE_DISCOVER_REDIRECT = "left_swipe_discover_redirect"
     const val PREF_AUTO_FOCUS_LEFT_SWIPE_REDIRECT = "auto_focus_left_swipe_redirect"
+    const val PREF_LIMIT_TWO_ROWS_SEARCH = "pref_limit_two_rows_search"
     
     // Class names
     const val LAUNCHER_CLASS = "com.android.launcher3.Launcher"
