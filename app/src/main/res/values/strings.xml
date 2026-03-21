@@ -17,6 +17,8 @@
     <string name="pref_left_swipe_discover_redirect_title">Redirect Left Swipe (Google Discover)</string>
     <string name="pref_auto_focus_left_swipe_redirect_title">Auto Focus on Left Swipe Redirect</string>
     <string name="pref_limit_two_rows_search_title">Show 2-Row Results</string>
+    <string name="pref_search_history_recency_title">Search History: Sort by Recent</string>
+    <string name="pref_search_history_frequency_title">Search History: Sort by Frequency</string>
     <string name="feature_settings">Feature settings</string>
     <string name="category_search_enhancement">Search Enhancement</string>
     <string name="category_auto_focus">Auto Focus (Show Keyboard)</string>

@@ -1,15 +1,18 @@
 package com.wizpizz.onepluspluslauncher.hook.features
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import com.highcapable.yukihookapi.hook.param.PackageParam
 import com.highcapable.yukihookapi.hook.factory.current
 import com.highcapable.yukihookapi.hook.factory.field
 import com.highcapable.yukihookapi.hook.factory.method
+import com.highcapable.yukihookapi.hook.param.PackageParam
+import com.highcapable.yukihookapi.hook.type.android.BundleClass
 import com.highcapable.yukihookapi.hook.type.java.BooleanType
 import com.highcapable.yukihookapi.hook.type.java.IntType
-import com.highcapable.yukihookapi.hook.type.android.BundleClass
-import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_SWIPE_DOWN_SEARCH_REDIRECT
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_AUTO_FOCUS_SWIPE_DOWN_REDIRECT
+import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_SEARCH_HISTORY_RECENCY
+import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_SWIPE_DOWN_SEARCH_REDIRECT
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.TAG
 
 /**
@@ -52,6 +55,27 @@ object SwipeDownSearchRedirectHook {
                                 HookUtils.setRedirectInProgress(false)
                             }
                             
+                            // Trigger history display if recency is enabled
+                            if (prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true)) {
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    val container = FuzzySearchHook.searchContainerInstance
+                                    if (container != null) {
+                                        try {
+                                            container.current().method {
+                                                name = "onSearchResult"
+                                                param(String::class.java, java.util.ArrayList::class.java)
+                                                superClass(true)
+                                            }.call(" ", java.util.ArrayList<Any>())
+                                            Log.d(TAG, "[SwipeDownSearch] Triggered history display")
+                                        } catch (e: Throwable) {
+                                            Log.e(TAG, "[SwipeDownSearch] Failed to trigger history: ${e.message}")
+                                        }
+                                    } else {
+                                        Log.d(TAG, "[SwipeDownSearch] No container cached for history display")
+                                    }
+                                }, 500L)
+                            }
+
                             // Return false to indicate we didn't show the stock search bar
                             // (prevents overlay from staying on top)
                             result = false
