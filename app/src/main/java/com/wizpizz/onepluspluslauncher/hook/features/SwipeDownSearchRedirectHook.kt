@@ -55,9 +55,11 @@ object SwipeDownSearchRedirectHook {
                                 HookUtils.setRedirectInProgress(false)
                             }
                             
-                            // Trigger history display if recency is enabled
+                            // Trigger history display if recency is enabled.
+                            // Use a short delay (50ms) so the flash of the default app list
+                            // is barely noticeable. Falls back to 500ms if container not cached yet.
                             if (prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true)) {
-                                Handler(Looper.getMainLooper()).postDelayed({
+                                val triggerHistory = {
                                     val container = FuzzySearchHook.searchContainerInstance
                                     if (container != null) {
                                         try {
@@ -70,10 +72,17 @@ object SwipeDownSearchRedirectHook {
                                         } catch (e: Throwable) {
                                             Log.e(TAG, "[SwipeDownSearch] Failed to trigger history: ${e.message}")
                                         }
-                                    } else {
-                                        Log.d(TAG, "[SwipeDownSearch] No container cached for history display")
                                     }
-                                }, 500L)
+                                }
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    if (FuzzySearchHook.searchContainerInstance != null) {
+                                        triggerHistory()
+                                    } else {
+                                        // Container not cached yet (first open), retry at 500ms
+                                        Log.d(TAG, "[SwipeDownSearch] Container not ready at 50ms, retrying at 500ms")
+                                        Handler(Looper.getMainLooper()).postDelayed(triggerHistory, 450L)
+                                    }
+                                }, 50L)
                             }
 
                             // Return false to indicate we didn't show the stock search bar
