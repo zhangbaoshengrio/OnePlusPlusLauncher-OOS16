@@ -40,7 +40,12 @@ object HookUtils {
     // Coordination flag to distinguish between swipe and redirect
     @Volatile
     private var isRedirectInProgress = false
-    
+
+    @Volatile
+    var drawerOpenTime = 0L
+    @Volatile
+    var drawerCloseTime = 0L
+
     /**
      * Mark that a redirect is in progress (used by GlobalSearchRedirectHook)
      */

@@ -26,9 +26,6 @@ object SearchHistoryDisplayHook {
                         val targetState = args[0]
                         Log.d(TAG, "[SearchHistory] onStateSetStart fired, state=$targetState")
 
-                        val useRecency = prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true)
-                        if (!useRecency) return@after
-
                         val allAppsState = try {
                             LAUNCHER_STATE_CLASS.toClass(appClassLoader)
                                 .field { name = "ALL_APPS" }.get().any()
@@ -38,7 +35,15 @@ object SearchHistoryDisplayHook {
                         } ?: return@after
 
                         Log.d(TAG, "[SearchHistory] match=${targetState == allAppsState}")
-                        if (targetState != allAppsState) return@after
+                        if (targetState == allAppsState) {
+                            HookUtils.drawerOpenTime = System.currentTimeMillis()
+                        } else {
+                            HookUtils.drawerCloseTime = System.currentTimeMillis()
+                            return@after
+                        }
+
+                        val useRecency = prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true)
+                        if (!useRecency) return@after
 
                         Handler(Looper.getMainLooper()).postDelayed({
                             val container = FuzzySearchHook.searchContainerInstance

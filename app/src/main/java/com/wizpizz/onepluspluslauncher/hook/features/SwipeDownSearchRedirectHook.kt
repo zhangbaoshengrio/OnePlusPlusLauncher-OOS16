@@ -40,19 +40,33 @@ object SwipeDownSearchRedirectHook {
                         val success = launcher?.let { openAppDrawer(it) }
                         
                         if (success == true) {
+                            // Record redirect time so Workspace.requestFocus hook can block
+                            // the gray focus box that appears on home screen icons after closing
+                            // the drawer.
+                            FuzzySearchHook.lastRedirectTime = System.currentTimeMillis()
+
                             // Clean up the pull down animation/blur overlay
                             cleanupPullDownAnimation(instance, launcher)
-                            
-                            // Auto focus search input if enabled
+
+                            // Clear redirect flag immediately.
+                            HookUtils.setRedirectInProgress(false)
+
+                            // Auto focus search input if enabled.
+                            // Delay until drawer animation completes (~350ms) so the keyboard
+                            // doesn't flash: IME shows → animation suppresses → re-shows = double flash.
                             if (prefs.getBoolean(PREF_AUTO_FOCUS_SWIPE_DOWN_REDIRECT, true)) {
-                                Log.d(TAG, "[SwipeDownSearch] Auto focus enabled, focusing search input")
-                                appClassLoader?.let { HookUtils.focusSearchInput(launcher, it) }
-                                // Clear redirect flag after focusing
-                                HookUtils.setRedirectInProgress(false)
-                            } else {
-                                Log.d(TAG, "[SwipeDownSearch] Auto focus disabled, clearing redirect flag")
-                                // Clear redirect flag immediately if not focusing
-                                HookUtils.setRedirectInProgress(false)
+                                Log.d(TAG, "[SwipeDownSearch] Auto focus enabled, scheduling after animation")
+                                val launcherRef = launcher
+                                val loader = appClassLoader
+                                if (launcherRef != null && loader != null) {
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        if (HookUtils.drawerOpenTime > HookUtils.drawerCloseTime) {
+                                            HookUtils.focusSearchInput(launcherRef, loader)
+                                        } else {
+                                            Log.d(TAG, "[SwipeDownSearch] Drawer closed before focus delay, skipping IME")
+                                        }
+                                    }, 500L)
+                                }
                             }
                             
                             // Trigger history display if recency is enabled.
