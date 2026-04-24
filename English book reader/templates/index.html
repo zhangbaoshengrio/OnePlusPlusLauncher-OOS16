@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Book Reader</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ══════════════ Navbar ══════════════ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span>📖</span>
+    <span>English Book Reader</span>
+  </div>
+
+  <div class="nav-book-info" id="nav-book-info">
+    <span class="nav-book-title" id="nav-book-title"></span>
+    <span class="nav-page-badge" id="nav-page-badge"></span>
+  </div>
+
+  <div class="nav-actions">
+    {% if books %}
+    <div class="dropdown-wrap" id="recent-wrap">
+      <button class="btn-outline" id="recent-btn">Recent ▾</button>
+      <div class="dropdown-menu" id="recent-menu">
+        {% for book in books %}
+        <div class="dropdown-item" data-filename="{{ book }}">{{ book }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <label class="btn-primary" for="file-input">+ Open Book</label>
+    <input type="file" id="file-input" accept=".txt,.epub" style="display:none">
+  </div>
+</nav>
+
+<!-- ══════════════ App Layout ══════════════ -->
+<div class="app-layout">
+
+  <!-- ── Reader Area ── -->
+  <main class="reader-area">
+
+    <!-- Welcome / Drop-zone -->
+    <div class="welcome" id="welcome">
+      <div class="welcome-inner" id="drop-zone">
+        <div class="welcome-icon">📚</div>
+        <h2>Open a book to start reading</h2>
+        <p>Supports <strong>.txt</strong> and <strong>.epub</strong> files</p>
+        <p class="welcome-sub">Click any word to look it up · Save to vocabulary · Export for Anki, PDF, or TXT</p>
+        <label class="btn-primary btn-lg" for="file-input">Open Book</label>
+        <p class="drop-hint">or drag &amp; drop a file here</p>
+      </div>
+    </div>
+
+    <!-- Book reader (hidden until loaded) -->
+    <div class="book-reader" id="book-reader" style="display:none">
+      <div class="pagination" id="pag-top">
+        <button class="btn-page" id="prev-top" disabled>← Prev</button>
+        <span class="page-label" id="page-label-top">Page 1 / 1</span>
+        <button class="btn-page" id="next-top">Next →</button>
+      </div>
+
+      <article class="book-text" id="book-text"></article>
+
+      <div class="pagination" id="pag-bot">
+        <button class="btn-page" id="prev-bot" disabled>← Prev</button>
+        <span class="page-label" id="page-label-bot">Page 1 / 1</span>
+        <button class="btn-page" id="next-bot">Next →</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Vocabulary Sidebar ── -->
+  <aside class="vocab-sidebar">
+    <div class="sidebar-head">
+      <span class="sidebar-title">Vocabulary</span>
+      <span class="count-pill" id="vocab-count">0</span>
+    </div>
+
+    <div class="word-list" id="word-list">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">✏️</div>
+        <p>No words saved yet</p>
+        <p class="empty-hint">Click a word while reading to look it up and save it here</p>
+      </div>
+    </div>
+
+    <div class="export-bar">
+      <div class="export-bar-title">Export vocabulary as</div>
+      <div class="export-grid">
+        <button class="exp-btn" id="exp-apkg">
+          <span class="exp-icon">🃏</span>
+          <span class="exp-name">Anki</span>
+          <span class="exp-ext">.apkg</span>
+        </button>
+        <button class="exp-btn" id="exp-pdf">
+          <span class="exp-icon">📄</span>
+          <span class="exp-name">PDF</span>
+          <span class="exp-ext">.pdf</span>
+        </button>
+        <button class="exp-btn" id="exp-txt-detail">
+          <span class="exp-icon">📝</span>
+          <span class="exp-name">Detailed</span>
+          <span class="exp-ext">.txt</span>
+        </button>
+        <button class="exp-btn" id="exp-txt-words">
+          <span class="exp-icon">📋</span>
+          <span class="exp-name">Words</span>
+          <span class="exp-ext">.txt</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ══════════════ Dictionary Popup ══════════════ -->
+<div class="dict-popup" id="dict-popup" aria-hidden="true">
+  <div class="popup-header">
+    <div class="popup-headword">
+      <span class="popup-word" id="popup-word"></span>
+      <span class="popup-phonetic" id="popup-phonetic"></span>
+    </div>
+    <button class="popup-close" id="popup-close" aria-label="Close">✕</button>
+  </div>
+  <!-- Tab bar: dict tabs inserted by JS, gear always on the right -->
+  <div class="popup-tab-bar" id="popup-tab-bar">
+    <button class="tab-settings-btn" id="tab-settings-btn" title="词典设置">⚙</button>
+  </div>
+  <div class="popup-body" id="popup-body">
+    <div class="popup-loading">Looking up…</div>
+  </div>
+  <div class="popup-footer">
+    <button class="add-btn" id="add-btn">+ Add to Vocabulary</button>
+  </div>
+</div>
+
+<!-- ══════════════ Dict Settings Dropdown ══════════════ -->
+<div class="dict-settings-dropdown" id="dict-settings-dropdown">
+  <div class="dsd-header">词典设置</div>
+  <div class="dsd-list" id="dsd-list"></div>
+  <div class="dsd-footer">
+    <button class="dsd-manage-btn" id="dsd-manage-btn">词典管理 →</button>
+  </div>
+</div>
+
+<!-- ══════════════ Dict Management Modal ══════════════ -->
+<div class="dict-manage-overlay" id="dict-manage-overlay">
+  <div class="dict-manage-modal">
+    <div class="dmm-header">
+      <span class="dmm-title">词典管理</span>
+      <button class="dmm-close" id="dmm-close">✕</button>
+    </div>
+    <div class="dmm-body" id="dmm-body"></div>
+  </div>
+</div>
+
+<!-- ══════════════ Page Loader ══════════════ -->
+<div class="page-loader" id="page-loader" style="display:none">
+  <div class="loader-ring"></div>
+</div>
+
+<script src="/static/js/reader.js"></script>
+</body>
+</html>
