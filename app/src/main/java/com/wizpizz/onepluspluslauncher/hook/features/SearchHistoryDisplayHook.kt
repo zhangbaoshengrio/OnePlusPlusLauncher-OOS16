@@ -45,7 +45,7 @@ object SearchHistoryDisplayHook {
                         val useRecency = prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true)
                         if (!useRecency) return@after
 
-                        val injectHistory = {
+                        val injectHistory: () -> Unit = {
                             val container = FuzzySearchHook.searchContainerInstance
                             if (container != null) {
                                 try {
