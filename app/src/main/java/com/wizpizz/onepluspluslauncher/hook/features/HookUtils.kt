@@ -202,10 +202,13 @@ object HookUtils {
             } catch (_: Throwable) {}
 
             // Retry keyboard show after a short delay (some builds need a second tick)
+            // Use SHOW_FORCED on later retries to override third-party IME suppression by launcher
             try {
                 if (searchUiManager is android.view.View) {
                     val view = searchUiManager
-                    val retryMs = listOf(250L, 400L, 600L)
+                    // 800ms and 1000ms retries cover the window after launcher animation fully settles,
+                    // which is when third-party IMEs (e.g. Sogou, Baidu, iFlytek) get suppressed and hidden.
+                    val retryMs = listOf(250L, 400L, 600L, 800L, 1000L)
                     for (delay in retryMs) {
                         view.postDelayed({
                             try {
@@ -237,20 +240,22 @@ object HookUtils {
                                     }.call()
                                 } catch (_: Throwable) {}
 
-                                // Force InputMethodManager on the EditText if possible
+                                // Force InputMethodManager on the EditText if possible.
+                                // Use SHOW_FORCED on retries >=600ms so third-party IMEs aren't
+                                // suppressed by launcher window focus events after animation ends.
                                 val targetView = (editText ?: view) as android.view.View
                                 val imm = targetView.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
                                 if (editText != null) {
                                     imm?.restartInput(editText)
                                 }
-                                imm?.showSoftInput(targetView, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-
-                                // On last retry, try a stronger toggle
-                                if (delay >= 1000L) {
-                                    imm?.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0)
+                                val showFlags = if (delay >= 600L) {
+                                    android.view.inputmethod.InputMethodManager.SHOW_FORCED
+                                } else {
+                                    android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT
                                 }
+                                imm?.showSoftInput(targetView, showFlags)
 
-                                Log.d(TAG, "[AutoFocus] Retried showKeyboard (delay=${delay}ms)")
+                                Log.d(TAG, "[AutoFocus] Retried showKeyboard (delay=${delay}ms, flags=${showFlags})")
                             } catch (e: Throwable) {
                                 Log.d(TAG, "[AutoFocus] Retry showKeyboard failed: ${e.message}")
                             }
