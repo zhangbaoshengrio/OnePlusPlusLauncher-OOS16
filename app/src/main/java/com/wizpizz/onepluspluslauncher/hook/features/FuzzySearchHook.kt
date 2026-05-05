@@ -102,17 +102,22 @@ object FuzzySearchHook {
                 param(com.highcapable.yukihookapi.hook.type.java.BooleanType)
             }?.hook {
                 after {
-                    if (pendingHistoryTrigger) {
-                        val container = searchContainerInstance
-                        if (container != null &&
-                            (container as? android.view.View)?.isAttachedToWindow == true) {
+                    val container = searchContainerInstance
+                    val containerReady = container != null &&
+                        (container as? android.view.View)?.isAttachedToWindow == true
+                    // Inject history synchronously when:
+                    //   (a) a swipe-down redirect triggered pendingHistoryTrigger, OR
+                    //   (b) a normal swipe-up open and the container is already cached/attached
+                    //       (prevents the all-apps flash on subsequent drawer opens).
+                    if (pendingHistoryTrigger || containerReady) {
+                        if (containerReady) {
                             // Do NOT clear pendingHistoryTrigger here.
                             // onSearchResult.before will clear it only when history is
                             // actually built successfully — so Choreographer/retry can
                             // still fire if this call gets empty results (stale/null cache).
-                            Log.d(TAG, "[FuzzySearch] Injecting history synchronously in showAllAppsFromIntent.after")
+                            Log.d(TAG, "[FuzzySearch] Injecting history synchronously in showAllAppsFromIntent.after (pendingTrigger=$pendingHistoryTrigger)")
                             try {
-                                container.current().method {
+                                container!!.current().method {
                                     name = "onSearchResult"
                                     param(String::class.java, java.util.ArrayList::class.java)
                                     superClass(true)

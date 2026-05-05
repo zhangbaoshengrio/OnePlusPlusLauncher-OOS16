@@ -45,23 +45,38 @@ object SearchHistoryDisplayHook {
                         val useRecency = prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true)
                         if (!useRecency) return@after
 
-                        Handler(Looper.getMainLooper()).postDelayed({
+                        val injectHistory = {
                             val container = FuzzySearchHook.searchContainerInstance
-                            if (container == null) {
+                            if (container != null) {
+                                try {
+                                    container.current().method {
+                                        name = "onSearchResult"
+                                        param(String::class.java, java.util.ArrayList::class.java)
+                                        superClass(true)
+                                    }.call("", java.util.ArrayList<Any>())
+                                    Log.d(TAG, "[SearchHistory] Triggered history display on drawer open")
+                                } catch (e: Throwable) {
+                                    Log.e(TAG, "[SearchHistory] Failed to trigger history: ${e.message}")
+                                }
+                            } else {
                                 Log.d(TAG, "[SearchHistory] No container cached yet")
-                                return@postDelayed
                             }
-                            try {
-                                container.current().method {
-                                    name = "onSearchResult"
-                                    param(String::class.java, java.util.ArrayList::class.java)
-                                    superClass(true)
-                                }.call("", java.util.ArrayList<Any>())
-                                Log.d(TAG, "[SearchHistory] Triggered history display on drawer open")
-                            } catch (e: Throwable) {
-                                Log.e(TAG, "[SearchHistory] Failed to trigger history: ${e.message}")
-                            }
-                        }, 400L)
+                        }
+
+                        val container = FuzzySearchHook.searchContainerInstance
+                        if (container != null &&
+                            (container as? android.view.View)?.isAttachedToWindow == true) {
+                            // Container already ready — inject immediately via post() so the
+                            // first frame of the drawer animation shows history, not all apps.
+                            Handler(Looper.getMainLooper()).post(injectHistory)
+                            Log.d(TAG, "[SearchHistory] Container ready, injecting history immediately")
+                        } else {
+                            // Container not yet attached (first open) — set pending flag so
+                            // onAttachedToWindow hook can pick it up, and schedule a fallback.
+                            FuzzySearchHook.pendingHistoryTrigger = true
+                            Log.d(TAG, "[SearchHistory] Container not ready, set pendingHistoryTrigger + scheduling fallback")
+                            Handler(Looper.getMainLooper()).postDelayed(injectHistory, 400L)
+                        }
                     }
                 }
                 Log.d(TAG, "[SearchHistory] onStateSetStart hook registered OK")
