@@ -17,16 +17,12 @@ object HookEntry : IYukiHookXposedInit {
         }
 
         loadApp(name = "com.android.launcher") {
-            // Load all feature hooks
             SwipeUpAutoFocusHook.apply(this)
             EnterKeyLaunchHook.apply(this)
             FuzzySearchHook.apply(this)
-            SearchLaunchTrackerHook.apply(this)
-            SearchHistoryDisplayHook.apply(this)
             GlobalSearchRedirectHook.apply(this)
             SwipeDownSearchRedirectHook.apply(this)
             LeftSwipeDiscoverRedirectHook.apply(this)
-            SearchResultsAboveBarHook.apply(this)
         }
     }
 }
