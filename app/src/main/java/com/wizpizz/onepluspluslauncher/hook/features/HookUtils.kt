@@ -79,22 +79,23 @@ object HookUtils {
     }
     
     /**
-     * Focus search input in app drawer
+     * Focus search input in app drawer.
+     * Mirrors the original wizpizz implementation: immediate focus + showKeyboard, no retries.
      */
     fun focusSearchInput(launcherInstance: Any, appClassLoader: ClassLoader) {
         if (launcherInstance !is android.content.Context) return
-        
+
         try {
             // Get AppsView
             var appsView = LAUNCHER_CLASS.toClass(appClassLoader)
                 .field { name = "mAppsView" }
                 .get(instance = launcherInstance)
                 .any()
-            
+
             if (appsView == null) {
                 appsView = launcherInstance.current().method { name = "getAppsView" }.call()
             }
-            
+
             if (appsView == null) {
                 Log.e(TAG, "[AutoFocus] Failed to get AppsView")
                 return
@@ -105,167 +106,51 @@ object HookUtils {
                 name = "getSearchUiManager"
                 superClass()
             }.call()
-            
+
             if (searchUiManager == null) {
                 Log.e(TAG, "[AutoFocus] Failed to get SearchUiManager")
                 return
             }
 
-            // Try multiple approaches to get and focus search input
-            var searchInputFocused = false
-            var editTextRef: android.widget.EditText? = null
-
             // Approach 1: Try getEditText method
+            var focused = false
             try {
                 val editText = searchUiManager.current().method {
                     name = "getEditText"
                     superClass()
                 }.call() as? android.widget.EditText
-
                 if (editText != null) {
-                    editText.isFocusable = true
-                    editText.isFocusableInTouchMode = true
                     editText.requestFocus()
-                    editText.requestFocusFromTouch()
-                    editText.performClick()
-                    searchInputFocused = true
-                    editTextRef = editText
-                    Log.d(TAG, "[AutoFocus] Successfully focused search input via getEditText")
+                    focused = true
+                    Log.d(TAG, "[AutoFocus] Focused via getEditText")
                 }
-            } catch (e: Throwable) {
-                Log.d(TAG, "[AutoFocus] getEditText method not available")
-            }
+            } catch (_: Throwable) {}
 
-            // Approach 2: Search for EditText in searchUiManager view hierarchy
-            if (!searchInputFocused && searchUiManager is android.view.ViewGroup) {
+            // Approach 2: Search for EditText in view hierarchy
+            if (!focused && searchUiManager is android.view.ViewGroup) {
                 val editText = findEditTextInViewGroup(searchUiManager)
                 if (editText != null) {
-                    editText.isFocusable = true
-                    editText.isFocusableInTouchMode = true
                     editText.requestFocus()
-                    editText.requestFocusFromTouch()
-                    editText.performClick()
-                    searchInputFocused = true
-                    editTextRef = editText
-                    Log.d(TAG, "[AutoFocus] Successfully focused search input via view traversal")
+                    focused = true
+                    Log.d(TAG, "[AutoFocus] Focused via view traversal")
                 }
             }
 
-            // Approach 3: Search for EditText in AppsView hierarchy (fallback)
-            if (!searchInputFocused && appsView is android.view.ViewGroup) {
-                val editText = findEditTextInViewGroup(appsView)
-                if (editText != null) {
-                    editText.isFocusable = true
-                    editText.isFocusableInTouchMode = true
-                    editText.requestFocus()
-                    editText.requestFocusFromTouch()
-                    editText.performClick()
-                    searchInputFocused = true
-                    editTextRef = editText
-                    Log.d(TAG, "[AutoFocus] Successfully focused search input via AppsView traversal")
-                }
+            if (!focused) {
+                Log.w(TAG, "[AutoFocus] Could not find EditText to focus")
             }
 
-            if (!searchInputFocused) {
-                Log.w(TAG, "[AutoFocus] Could not focus search input - no suitable method found")
-            }
-
-            // Show keyboard (immediate)
+            // Show keyboard immediately (same as wizpizz original)
             try {
                 searchUiManager.current().method {
                     name = "showKeyboard"
                     superClass()
                 }.call()
-            } catch (_: Throwable) {}
-
-            // If we have a real EditText, force IME on it (post to wait for layout)
-            try {
-                val et = editTextRef
-                if (et != null) {
-                    et.post {
-                        try {
-                            val imm = et.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
-                            imm?.restartInput(et)
-                            imm?.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                            Log.d(TAG, "[AutoFocus] showSoftInput on EditText (post)")
-                        } catch (_: Throwable) {}
-                    }
-                    et.postDelayed({
-                        try {
-                            val imm = et.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
-                            imm?.restartInput(et)
-                            imm?.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                            Log.d(TAG, "[AutoFocus] showSoftInput on EditText (postDelayed=100ms)")
-                        } catch (_: Throwable) {}
-                    }, 100L)
-                }
-            } catch (_: Throwable) {}
-
-            // Retry keyboard show after a short delay (some builds need a second tick)
-            // Use SHOW_FORCED on later retries to override third-party IME suppression by launcher
-            try {
-                if (searchUiManager is android.view.View) {
-                    val view = searchUiManager
-                    // 800ms and 1000ms retries cover the window after launcher animation fully settles,
-                    // which is when third-party IMEs (e.g. Sogou, Baidu, iFlytek) get suppressed and hidden.
-                    val retryMs = listOf(250L, 400L, 600L, 800L, 1000L)
-                    for (delay in retryMs) {
-                        view.postDelayed({
-                            try {
-                                // Re-focus if possible
-                                val editText = editTextRef ?: try {
-                                    searchUiManager.current().method {
-                                        name = "getEditText"
-                                        superClass()
-                                    }.call() as? android.widget.EditText
-                                } catch (_: Throwable) { null }
-                                    ?: if (searchUiManager is android.view.ViewGroup) {
-                                        findEditTextInViewGroup(searchUiManager)
-                                    } else null
-                                    ?: if (appsView is android.view.ViewGroup) {
-                                        findEditTextInViewGroup(appsView)
-                                    } else null
-
-                                editText?.isFocusable = true
-                                editText?.isFocusableInTouchMode = true
-                                editText?.requestFocus()
-                                editText?.requestFocusFromTouch()
-                                editText?.performClick()
-
-                                // Try framework showKeyboard again
-                                try {
-                                    searchUiManager.current().method {
-                                        name = "showKeyboard"
-                                        superClass()
-                                    }.call()
-                                } catch (_: Throwable) {}
-
-                                // Force InputMethodManager on the EditText if possible.
-                                // Use SHOW_FORCED on retries >=600ms so third-party IMEs aren't
-                                // suppressed by launcher window focus events after animation ends.
-                                val targetView = (editText ?: view) as android.view.View
-                                val imm = targetView.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
-                                if (editText != null) {
-                                    imm?.restartInput(editText)
-                                }
-                                val showFlags = if (delay >= 600L) {
-                                    android.view.inputmethod.InputMethodManager.SHOW_FORCED
-                                } else {
-                                    android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT
-                                }
-                                imm?.showSoftInput(targetView, showFlags)
-
-                                Log.d(TAG, "[AutoFocus] Retried showKeyboard (delay=${delay}ms, flags=${showFlags})")
-                            } catch (e: Throwable) {
-                                Log.d(TAG, "[AutoFocus] Retry showKeyboard failed: ${e.message}")
-                            }
-                        }, delay)
-                    }
-                }
+                Log.d(TAG, "[AutoFocus] showKeyboard called")
             } catch (_: Throwable) {}
 
         } catch (e: Throwable) {
-            Log.e(TAG, "[AutoFocus] Error during focus logic: ${e.message}")
+            Log.e(TAG, "[AutoFocus] Error: ${e.message}")
         }
     }
     
