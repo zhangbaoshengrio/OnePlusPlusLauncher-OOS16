@@ -65,7 +65,7 @@ object SwipeDownSearchRedirectHook {
                                         } else {
                                             Log.d(TAG, "[SwipeDownSearch] Drawer closed before focus delay, skipping IME")
                                         }
-                                    }, 500L)
+                                    }, 300L)
                                 }
                             }
                             
