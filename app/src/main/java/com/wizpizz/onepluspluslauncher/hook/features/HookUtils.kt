@@ -192,8 +192,8 @@ object HookUtils {
                         try {
                             val imm = et.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
                             imm?.restartInput(et)
-                            imm?.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                            Log.d(TAG, "[AutoFocus] showSoftInput on EditText (postDelayed=100ms)")
+                            imm?.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
+                            Log.d(TAG, "[AutoFocus] showSoftInput on EditText (postDelayed=100ms, FORCED)")
                         } catch (_: Throwable) {}
                     }, 100L)
                 }

@@ -44,7 +44,7 @@ object SwipeDownSearchRedirectHook {
                                 if (launcherRef != null && loader != null) {
                                     Handler(Looper.getMainLooper()).postDelayed({
                                         HookUtils.focusSearchInput(launcherRef, loader)
-                                    }, 500L)
+                                    }, 300L)
                                 }
                             }
 
