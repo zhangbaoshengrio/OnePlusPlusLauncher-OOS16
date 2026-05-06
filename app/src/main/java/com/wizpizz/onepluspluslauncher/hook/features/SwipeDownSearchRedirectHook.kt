@@ -43,11 +43,7 @@ object SwipeDownSearchRedirectHook {
                                 val loader = appClassLoader
                                 if (launcherRef != null && loader != null) {
                                     Handler(Looper.getMainLooper()).postDelayed({
-                                        if (HookUtils.drawerOpenTime > HookUtils.drawerCloseTime) {
-                                            HookUtils.focusSearchInput(launcherRef, loader)
-                                        } else {
-                                            Log.d(TAG, "[SwipeDownSearch] Drawer closed before focus delay, skipping IME")
-                                        }
+                                        HookUtils.focusSearchInput(launcherRef, loader)
                                     }, 500L)
                                 }
                             }
