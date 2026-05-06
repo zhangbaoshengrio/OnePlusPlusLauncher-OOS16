@@ -1,7 +1,5 @@
 package com.wizpizz.onepluspluslauncher.hook.features
 
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import com.highcapable.yukihookapi.hook.factory.current
 import com.highcapable.yukihookapi.hook.factory.method
@@ -36,24 +34,14 @@ object SwipeDownSearchRedirectHook {
 
                         if (success == true) {
                             cleanupPullDownAnimation(instance, launcher)
-                            HookUtils.setRedirectInProgress(false)
 
                             if (prefs.getBoolean(PREF_AUTO_FOCUS_SWIPE_DOWN_REDIRECT, true)) {
-                                Log.d(TAG, "[SwipeDownSearch] Auto focus enabled, scheduling after animation")
-                                val launcherRef = launcher
-                                val loader = appClassLoader
-                                if (launcherRef != null && loader != null) {
-                                    Handler(Looper.getMainLooper()).postDelayed({
-                                        if (HookUtils.drawerOpenTime > HookUtils.drawerCloseTime) {
-                                            HookUtils.focusSearchInput(launcherRef, loader)
-                                        } else {
-                                            Log.d(TAG, "[SwipeDownSearch] Drawer closed before focus delay, skipping IME")
-                                        }
-                                    }, 500L)
-                                }
+                                Log.d(TAG, "[SwipeDownSearch] Auto focus enabled, focusing search input")
+                                appClassLoader?.let { HookUtils.focusSearchInput(launcher, it) }
                             }
 
-                            result = false
+                            HookUtils.setRedirectInProgress(false)
+                            result = true
                         } else {
                             Log.d(TAG, "[SwipeDownSearch] Failed to open app drawer, allowing original behavior")
                             HookUtils.setRedirectInProgress(false)
