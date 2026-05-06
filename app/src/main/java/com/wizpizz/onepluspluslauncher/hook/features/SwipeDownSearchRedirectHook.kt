@@ -41,7 +41,7 @@ object SwipeDownSearchRedirectHook {
                             }
 
                             HookUtils.setRedirectInProgress(false)
-                            result = true
+                            result = false
                         } else {
                             Log.d(TAG, "[SwipeDownSearch] Failed to open app drawer, allowing original behavior")
                             HookUtils.setRedirectInProgress(false)
