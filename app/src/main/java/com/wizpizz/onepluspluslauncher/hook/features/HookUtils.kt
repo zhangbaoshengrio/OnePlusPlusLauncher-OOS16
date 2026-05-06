@@ -243,12 +243,9 @@ object HookUtils {
                                 if (editText != null) {
                                     imm?.restartInput(editText)
                                 }
-                                imm?.showSoftInput(targetView, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-
-                                // On last retry, try a stronger toggle
-                                if (delay >= 1000L) {
-                                    imm?.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0)
-                                }
+                                // Use SHOW_FORCED so re-show attempts after IME self-hide (e.g.
+                                // 手心输入法 hides at ~430ms) actually stick.
+                                imm?.showSoftInput(targetView, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
 
                                 Log.d(TAG, "[AutoFocus] Retried showKeyboard (delay=${delay}ms)")
                             } catch (e: Throwable) {

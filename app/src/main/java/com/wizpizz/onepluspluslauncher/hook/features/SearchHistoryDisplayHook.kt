@@ -38,7 +38,14 @@ object SearchHistoryDisplayHook {
                         if (targetState == allAppsState) {
                             HookUtils.drawerOpenTime = System.currentTimeMillis()
                         } else {
-                            HookUtils.drawerCloseTime = System.currentTimeMillis()
+                            val now = System.currentTimeMillis()
+                            // During swipe-down redirect, cleanup states fire within ~50-100ms
+                            // of drawerOpenTime. Updating drawerCloseTime this soon causes the
+                            // SwipeDownSearchRedirectHook guard to falsely detect "drawer closed".
+                            // Only update drawerCloseTime if the drawer has been open long enough.
+                            if (now - HookUtils.drawerOpenTime > 500L) {
+                                HookUtils.drawerCloseTime = now
+                            }
                             return@after
                         }
 
