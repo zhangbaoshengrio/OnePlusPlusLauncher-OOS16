@@ -37,8 +37,11 @@ object SwipeUpAutoFocusHook {
                         .field { name = "ALL_APPS" }.get().any() ?: return@after
 
                     if (targetState == allAppsState) {
+                        HookUtils.drawerOpenTime = System.currentTimeMillis()
                         Log.d(TAG, "[AutoFocus] Focusing search input for swipe-up gesture")
                         appClassLoader?.let { HookUtils.focusSearchInput(launcherInstance, it) }
+                    } else {
+                        HookUtils.drawerCloseTime = System.currentTimeMillis()
                     }
                 }
             }
