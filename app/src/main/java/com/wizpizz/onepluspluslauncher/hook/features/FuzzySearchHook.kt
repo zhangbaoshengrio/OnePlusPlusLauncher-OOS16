@@ -1,10 +1,15 @@
 package com.wizpizz.onepluspluslauncher.hook.features
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.highcapable.yukihookapi.hook.factory.current
 import com.highcapable.yukihookapi.hook.factory.field
 import com.highcapable.yukihookapi.hook.factory.method
 import com.highcapable.yukihookapi.hook.param.PackageParam
+import com.highcapable.yukihookapi.hook.type.java.BooleanType
+import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.LAUNCHER_CLASS
+import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_SEARCH_HISTORY_RECENCY
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.PREF_USE_FUZZY_SEARCH
 import com.wizpizz.onepluspluslauncher.hook.features.HookUtils.TAG
 import me.xdrop.fuzzywuzzy.FuzzySearch
@@ -24,6 +29,17 @@ object FuzzySearchHook {
     private const val SUBSTRING_MATCH_MULTIPLIER = 1.3
     private const val SUBSEQUENCE_MATCH_MULTIPLIER = 1.1
 
+    // Shared state for SwipeDownSearchRedirectHook coordination
+    @Volatile
+    var searchContainerInstance: Any? = null
+    @Volatile
+    var lastRedirectTime = 0L
+
+    // Anti-flash: timestamp when history was injected, blocks reset() for 2s
+    @Volatile
+    private var historyInjectedTime = 0L
+    private const val HISTORY_LOCK_WINDOW_MS = 2000L
+
     data class FuzzyMatchResult(
         val appInfo: Any,
         val score: Int,
@@ -33,11 +49,15 @@ object FuzzySearchHook {
 
     fun apply(packageParam: PackageParam) {
         packageParam.apply {
+            // Hook onSearchResult for fuzzy search
             SEARCH_CONTAINER_CLASS.toClassOrNull(appClassLoader)?.method {
                 name = "onSearchResult"
                 param(String::class.java.name, ARRAY_LIST_CLASS)
             }?.hook {
                 before {
+                    // Cache the container instance for SwipeDownSearchRedirectHook
+                    searchContainerInstance = instance
+
                     val rawQuery = args[0] as? String ?: return@before
                     val sanitizedQuery = sanitizeSearchQuery(rawQuery)
                     if (sanitizedQuery.isBlank()) return@before
@@ -55,6 +75,73 @@ object FuzzySearchHook {
                     }
                 }
             } ?: Log.e(TAG, "[FuzzySearch] Could not find onSearchResult method")
+
+            // Cache container instance on attach (for first-open reliability)
+            SEARCH_CONTAINER_CLASS.toClassOrNull(appClassLoader)?.method {
+                name = "onAttachedToWindow"
+                emptyParam()
+            }?.hook {
+                after {
+                    searchContainerInstance = instance
+                    Log.d(TAG, "[FuzzySearch] Cached searchContainerInstance via onAttachedToWindow")
+                }
+            }
+
+            // Anti-flash: hook showAllAppsFromIntent to synchronously trigger search mode
+            // This runs on the SAME frame as the drawer open, before any vsync renders the app grid
+            LAUNCHER_CLASS.toClassOrNull(appClassLoader)?.method {
+                name = "showAllAppsFromIntent"
+                param(BooleanType)
+            }?.hook {
+                after {
+                    val useHistory = try { prefs.getBoolean(PREF_SEARCH_HISTORY_RECENCY, true) } catch (_: Throwable) { true }
+                    if (!useHistory) return@after
+
+                    // Only act within 1s of a redirect (not normal swipe-up)
+                    if (System.currentTimeMillis() - lastRedirectTime > 1000) return@after
+
+                    val container = searchContainerInstance ?: return@after
+                    try {
+                        container.current().method {
+                            name = "onSearchResult"
+                            param(String::class.java, java.util.ArrayList::class.java)
+                            superClass(true)
+                        }.call(" ", java.util.ArrayList<Any>())
+                        historyInjectedTime = System.currentTimeMillis()
+                        Log.d(TAG, "[AntiFlash] Synchronous search mode trigger in showAllAppsFromIntent.after")
+                    } catch (e: Throwable) {
+                        Log.e(TAG, "[AntiFlash] Failed to trigger search mode: ${e.message}")
+                    }
+                }
+            }
+
+            // Anti-flash: block reset() within 2s of history injection
+            // The launcher calls reset() after ALL_APPS animation ends, which would wipe search mode
+            SEARCH_CONTAINER_CLASS.toClassOrNull(appClassLoader)?.method {
+                name = "reset"
+                emptyParam()
+            }?.hook {
+                before {
+                    if (System.currentTimeMillis() - historyInjectedTime < HISTORY_LOCK_WINDOW_MS) {
+                        result = null // Block reset
+                        Log.d(TAG, "[AntiFlash] Blocked reset() within history lock window")
+                    }
+                }
+            }
+
+            // Anti-flash: block Workspace.requestFocus for 5s after redirect
+            // Prevents gray focus box appearing on desktop icons
+            "com.android.launcher3.Workspace".toClassOrNull(appClassLoader)?.method {
+                name = "requestFocus"
+                paramCount(0..2)
+            }?.hook {
+                before {
+                    if (System.currentTimeMillis() - lastRedirectTime < 5000) {
+                        result = false
+                        Log.d(TAG, "[AntiFlash] Blocked Workspace.requestFocus after redirect")
+                    }
+                }
+            }
         }
     }
 
